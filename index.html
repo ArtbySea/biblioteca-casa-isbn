@@ -9,19 +9,26 @@
   <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
 
   <style>
-    * { box-sizing: border-box; }
+    * {
+      box-sizing: border-box;
+    }
 
     body {
       margin: 0;
+      font-family: Arial, sans-serif;
       background: #f5f5f5;
       color: #222;
-      font-family: Arial, sans-serif;
     }
 
     header {
-      padding: 22px 16px;
       background: white;
+      padding: 22px 16px;
       border-bottom: 1px solid #ddd;
+    }
+
+    header h1 {
+      margin: 0 0 6px;
+      font-size: 24px;
     }
 
     main {
@@ -29,11 +36,6 @@
       margin: 20px auto;
       padding: 0 14px;
     }
-
-    h1 { margin: 0 0 6px; font-size: 24px; }
-    h2 { margin-top: 0; font-size: 19px; }
-
-    .nota { color: #666; font-size: 14px; line-height: 1.5; }
 
     .card {
       background: white;
@@ -43,42 +45,65 @@
       margin-bottom: 16px;
     }
 
+    h2 {
+      margin: 0 0 14px;
+      font-size: 19px;
+    }
+
+    .nota {
+      color: #666;
+      font-size: 14px;
+      line-height: 1.5;
+    }
+
     button, input {
+      display: block;
       width: 100%;
       padding: 14px;
+      margin: 9px 0;
       font-size: 16px;
       border-radius: 8px;
-      margin: 7px 0;
     }
 
     button {
-      border: 0;
       background: #222;
       color: white;
+      border: none;
       cursor: pointer;
     }
 
-    button:disabled { opacity: .5; }
+    button:disabled {
+      opacity: .5;
+      cursor: wait;
+    }
 
-    .secundario {
+    button.secundario {
       background: white;
       color: #222;
       border: 1px solid #aaa;
     }
 
-    input { border: 1px solid #aaa; }
+    input {
+      border: 1px solid #aaa;
+    }
 
     #reader {
       width: 100%;
       overflow: hidden;
-      margin: 12px 0;
+      margin-top: 12px;
+    }
+
+    #reader video {
+      max-width: 100%;
+      border-radius: 8px;
     }
 
     #mensagem {
       padding: 14px;
+      margin-bottom: 16px;
       background: #eee;
       border-radius: 8px;
-      margin-bottom: 16px;
+      font-size: 14px;
       overflow-wrap: anywhere;
     }
 
@@ -92,17 +117,23 @@
       color: #176536;
     }
 
-    [hidden] { display: none !important; }
+    [hidden] {
+      display: none !important;
+    }
   </style>
 </head>
 
 <body>
+
   <header>
     <h1>Leitor de ISBN</h1>
-    <div class="nota">Biblioteca Casa · Artur e Samuel</div>
+    <div class="nota">
+      Biblioteca Casa · Artur e Samuel
+    </div>
   </header>
 
   <main>
+
     <div id="mensagem" role="status" aria-live="polite">
       Leitor pronto para iniciar.
     </div>
@@ -111,8 +142,8 @@
       <h2>Digitalizar código de barras</h2>
 
       <p class="nota">
-        Aponta a câmara traseira para o código de barras
-        ISBN/EAN-13 de um livro.
+        Aponta a câmara traseira para o código
+        ISBN/EAN-13 do livro.
       </p>
 
       <button id="abrir" onclick="abrirCamara()">
@@ -121,8 +152,10 @@
 
       <div id="reader"></div>
 
-      <button id="parar" class="secundario"
-              onclick="pararCamara()" hidden>
+      <button id="parar"
+              class="secundario"
+              onclick="pararCamara()"
+              hidden>
         Parar câmara
       </button>
     </section>
@@ -130,10 +163,15 @@
     <section class="card">
       <h2>ISBN identificado</h2>
 
-      <input id="isbn" inputmode="numeric"
-             maxlength="17"
-             placeholder="978..."
-             aria-label="ISBN">
+      <input
+        id="isbn"
+        type="text"
+        inputmode="numeric"
+        maxlength="17"
+        autocomplete="off"
+        placeholder="978..."
+        aria-label="ISBN identificado"
+      >
 
       <button onclick="confirmarISBN()">
         Confirmar ISBN
@@ -143,58 +181,75 @@
         Copiar ISBN
       </button>
 
+      <button onclick="voltarBiblioteca()">
+        Voltar à Biblioteca Casa
+      </button>
+
       <p class="nota">
-        Também podes introduzir o ISBN manualmente.
-        Nesta versão de teste, nenhum livro é criado
-        ou alterado.
+        O ISBN será enviado para a Biblioteca Casa.
+        Nenhum livro será guardado automaticamente.
       </p>
     </section>
+
   </main>
 
   <script>
+    "use strict";
+
+    const URL_BIBLIOTECA =
+      "https://script.google.com/macros/s/AKfycbxrdANSHWmMhF8kN7Ik9C8JdJPfEcdTWuRWlwX0laF1IqL6PHIeTp0sy_45xUCL8fvHSQ/exec";
+
+    const $ = id => document.getElementById(id);
+
     let scanner = null;
     let ocupado = false;
     let reconhecido = false;
 
-    const $ = id => document.getElementById(id);
-
-    function mensagem(texto, tipo = '') {
-      $('mensagem').textContent = texto;
-      $('mensagem').className = tipo;
+    function mensagem(texto, tipo = "") {
+      $("mensagem").textContent = texto;
+      $("mensagem").className = tipo;
     }
 
     function normalizarISBN(valor) {
-      return String(valor || '')
-        .replace(/[^0-9X]/gi, '')
+      return String(valor || "")
+        .replace(/[^0-9X]/gi, "")
         .toUpperCase();
     }
 
     function isbn13Valido(isbn) {
-      if (!/^97[89]\d{10}$/.test(isbn)) return false;
+      if (!/^97[89]\d{10}$/.test(isbn)) {
+        return false;
+      }
 
       let soma = 0;
 
       for (let i = 0; i < 12; i++) {
-        soma += Number(isbn[i]) * (i % 2 ? 3 : 1);
+        soma += Number(isbn[i]) *
+          (i % 2 === 0 ? 1 : 3);
       }
 
-      return (10 - soma % 10) % 10 === Number(isbn[12]);
+      const digito = (10 - (soma % 10)) % 10;
+
+      return digito === Number(isbn[12]);
     }
 
     async function abrirCamara() {
       if (ocupado || scanner) return;
 
-      if (typeof Html5Qrcode === 'undefined') {
-        mensagem('Não foi possível carregar o leitor.', 'erro');
+      if (typeof Html5Qrcode === "undefined") {
+        mensagem(
+          "Não foi possível carregar o leitor de códigos.",
+          "erro"
+        );
         return;
       }
 
       ocupado = true;
       reconhecido = false;
-      $('abrir').disabled = true;
+      $("abrir").disabled = true;
 
       try {
-        scanner = new Html5Qrcode('reader', {
+        scanner = new Html5Qrcode("reader", {
           formatsToSupport: [
             Html5QrcodeSupportedFormats.EAN_13
           ],
@@ -202,15 +257,21 @@
         });
 
         await scanner.start(
-          { facingMode: 'environment' },
+          { facingMode: "environment" },
           {
             fps: 10,
             qrbox: (largura, altura) => ({
-              width: Math.min(Math.floor(largura * 0.9), 320),
-              height: Math.min(Math.floor(altura * 0.45), 140)
+              width: Math.min(
+                Math.floor(largura * 0.9),
+                320
+              ),
+              height: Math.min(
+                Math.floor(altura * 0.45),
+                140
+              )
             })
           },
-          async codigo => {
+          codigo => {
             if (reconhecido) return;
 
             const isbn = normalizarISBN(codigo);
@@ -218,32 +279,46 @@
             if (!isbn13Valido(isbn)) return;
 
             reconhecido = true;
-            $('isbn').value = isbn;
+            $("isbn").value = isbn;
 
-            mensagem('ISBN reconhecido: ' + isbn, 'sucesso');
-            await pararCamara();
+            mensagem(
+              "ISBN reconhecido: " + isbn,
+              "sucesso"
+            );
+
+            pararCamara();
           },
           () => {}
         );
 
-        $('parar').hidden = false;
-        mensagem('Câmara ativa. Aponta para o ISBN.');
+        if (scanner && scanner.isScanning) {
+          $("parar").hidden = false;
+
+          if (!reconhecido) {
+            mensagem(
+              "Câmara ativa. Aponta para o ISBN."
+            );
+          }
+        }
 
       } catch (erro) {
         mensagem(
-          'Erro ao abrir a câmara: ' +
+          "Erro ao abrir a câmara: " +
           (erro.message || String(erro)),
-          'erro'
+          "erro"
         );
 
         if (scanner) {
-          try { await scanner.clear(); } catch (e) {}
+          try {
+            await scanner.clear();
+          } catch (e) {}
+
           scanner = null;
         }
 
       } finally {
         ocupado = false;
-        $('abrir').disabled = false;
+        $("abrir").disabled = false;
       }
     }
 
@@ -254,42 +329,100 @@
       scanner = null;
 
       try {
-        if (atual.isScanning) await atual.stop();
+        if (atual.isScanning) {
+          await atual.stop();
+        }
+
         await atual.clear();
+
       } catch (erro) {
-        console.warn(erro);
+        console.warn(
+          "Erro ao parar a câmara:",
+          erro
+        );
+
       } finally {
-        $('parar').hidden = true;
+        $("parar").hidden = true;
       }
     }
 
     function confirmarISBN() {
-      const isbn = normalizarISBN($('isbn').value);
-      $('isbn').value = isbn;
+      const isbn = normalizarISBN(
+        $("isbn").value
+      );
+
+      $("isbn").value = isbn;
 
       if (!isbn13Valido(isbn)) {
-        mensagem('Introduz um ISBN-13 válido.', 'erro');
+        mensagem(
+          "Introduz um ISBN-13 válido.",
+          "erro"
+        );
         return;
       }
 
-      mensagem('ISBN confirmado: ' + isbn, 'sucesso');
+      mensagem(
+        "ISBN confirmado: " + isbn,
+        "sucesso"
+      );
     }
 
     async function copiarISBN() {
-      const isbn = normalizarISBN($('isbn').value);
+      const isbn = normalizarISBN(
+        $("isbn").value
+      );
 
       if (!isbn13Valido(isbn)) {
-        mensagem('Primeiro identifica um ISBN válido.', 'erro');
+        mensagem(
+          "Primeiro identifica um ISBN válido.",
+          "erro"
+        );
         return;
       }
 
       try {
         await navigator.clipboard.writeText(isbn);
-        mensagem('ISBN copiado: ' + isbn, 'sucesso');
+
+        mensagem(
+          "ISBN copiado: " + isbn,
+          "sucesso"
+        );
+
       } catch (erro) {
-        mensagem('Não foi possível copiar automaticamente.', 'erro');
+        mensagem(
+          "Não foi possível copiar automaticamente.",
+          "erro"
+        );
       }
     }
+
+    async function voltarBiblioteca() {
+      const isbn = normalizarISBN(
+        $("isbn").value
+      );
+
+      if (!isbn13Valido(isbn)) {
+        mensagem(
+          "Primeiro digitaliza ou introduz um ISBN válido.",
+          "erro"
+        );
+        return;
+      }
+
+      await pararCamara();
+
+      const destino = new URL(URL_BIBLIOTECA);
+      destino.searchParams.set("isbn", isbn);
+
+      window.location.assign(destino.toString());
+    }
+
+    window.addEventListener("pagehide", () => {
+      if (scanner) {
+        pararCamara();
+      }
+    });
   </script>
+
 </body>
 </html>
