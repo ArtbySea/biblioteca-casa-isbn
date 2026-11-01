@@ -44,7 +44,7 @@ function norm(s){return String(s||'').replace(/[^0-9X]/gi,'').toUpperCase();}
 function valid(s){if(!/^97[89]\d{10}$/.test(s))return false;let sum=0;for(let i=0;i<12;i++)sum+=Number(s[i])*(i%2?3:1);return (10-sum%10)%10===Number(s[12]);}
 async function stopCamera(){const s=scanner;scanner=null;if(!s)return;try{if(s.isScanning)await s.stop();await s.clear();}catch(e){console.warn(e);}}
 function go(isbn){const u=new URL(APP_URL);u.searchParams.set('modo',mode);if(isbn)u.searchParams.set('isbn',isbn);location.replace(u.toString());}
-async function onRead(raw){if(done)return;const isbn=norm(raw);if(!valid(isbn))return;done=true;$('isbn').value=isbn;msg('ISBN reconhecido: '+isbn+'. A regressar à Biblioteca Casa...','success');await stopCamera();go(isbn);}
+async function onRead(raw){if(done)return;const isbn=norm(raw);if(!valid(isbn))return;done=true;$('isbn').value=isbn;msg('ISBN reconhecido: '+isbn+'. A regressar à Biblioteca Casa...','success');go(isbn);}
 async function openCamera(){if(opening||scanner||done)return;opening=true;$('retry').hidden=true;
 try{if(typeof Html5Qrcode==='undefined')throw new Error('Biblioteca de leitura não carregada.');
 scanner=new Html5Qrcode('reader',{formatsToSupport:[Html5QrcodeSupportedFormats.EAN_13],verbose:false});
@@ -52,8 +52,8 @@ await scanner.start({facingMode:'environment'},{fps:10,qrbox:(w,h)=>({width:Math
 if(!done)msg('Câmara ativa. Aponta para o ISBN.');
 }catch(e){msg('Não foi possível abrir a câmara: '+(e.message||e)+'. Podes introduzir o ISBN manualmente.','error');await stopCamera();$('retry').hidden=false;}
 finally{opening=false;}}
-async function sendISBN(){const isbn=norm($('isbn').value);if(!valid(isbn)){msg('Introduz um ISBN-13 válido.','error');return;}if(done)return;done=true;msg('A regressar à Biblioteca Casa...','success');await stopCamera();go(isbn);}
-async function returnWithoutISBN(){done=true;await stopCamera();go('');}
+async function sendISBN(){const isbn=norm($('isbn').value);if(!valid(isbn)){msg('Introduz um ISBN-13 válido.','error');return;}if(done)return;done=true;msg('A regressar à Biblioteca Casa...','success');go(isbn);}
+function returnWithoutISBN(){done=true;go('');}
 window.addEventListener('pagehide',()=>{if(scanner)stopCamera();});
 window.addEventListener('load',()=>openCamera());
 </script>
