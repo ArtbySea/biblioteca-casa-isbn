@@ -1,428 +1,61 @@
-
 <!DOCTYPE html>
 <html lang="pt-PT">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Leitor ISBN — Biblioteca Casa</title>
-
-  <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
-
-  <style>
-    * {
-      box-sizing: border-box;
-    }
-
-    body {
-      margin: 0;
-      font-family: Arial, sans-serif;
-      background: #f5f5f5;
-      color: #222;
-    }
-
-    header {
-      background: white;
-      padding: 22px 16px;
-      border-bottom: 1px solid #ddd;
-    }
-
-    header h1 {
-      margin: 0 0 6px;
-      font-size: 24px;
-    }
-
-    main {
-      max-width: 600px;
-      margin: 20px auto;
-      padding: 0 14px;
-    }
-
-    .card {
-      background: white;
-      border: 1px solid #ddd;
-      border-radius: 12px;
-      padding: 18px;
-      margin-bottom: 16px;
-    }
-
-    h2 {
-      margin: 0 0 14px;
-      font-size: 19px;
-    }
-
-    .nota {
-      color: #666;
-      font-size: 14px;
-      line-height: 1.5;
-    }
-
-    button, input {
-      display: block;
-      width: 100%;
-      padding: 14px;
-      margin: 9px 0;
-      font-size: 16px;
-      border-radius: 8px;
-    }
-
-    button {
-      background: #222;
-      color: white;
-      border: none;
-      cursor: pointer;
-    }
-
-    button:disabled {
-      opacity: .5;
-      cursor: wait;
-    }
-
-    button.secundario {
-      background: white;
-      color: #222;
-      border: 1px solid #aaa;
-    }
-
-    input {
-      border: 1px solid #aaa;
-    }
-
-    #reader {
-      width: 100%;
-      overflow: hidden;
-      margin-top: 12px;
-    }
-
-    #reader video {
-      max-width: 100%;
-      border-radius: 8px;
-    }
-
-    #mensagem {
-      padding: 14px;
-      margin-bottom: 16px;
-      background: #eee;
-      border-radius: 8px;
-      font-size: 14px;
-      overflow-wrap: anywhere;
-    }
-
-    #mensagem.erro {
-      background: #fff0ef;
-      color: #a21d16;
-    }
-
-    #mensagem.sucesso {
-      background: #eef8f0;
-      color: #176536;
-    }
-
-    [hidden] {
-      display: none !important;
-    }
-  </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Leitor ISBN — Biblioteca Casa</title>
+<script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
+<style>
+*{box-sizing:border-box}body{margin:0;font:16px Arial,sans-serif;background:#f5f5f5;color:#222}
+header{background:white;padding:20px 16px;border-bottom:1px solid #ddd}h1{font-size:24px;margin:0 0 6px}
+main{max-width:600px;margin:18px auto;padding:0 14px}.card{background:white;border:1px solid #ddd;border-radius:12px;padding:18px;margin-bottom:14px}
+.note{color:#666;font-size:14px;line-height:1.5}button,input{display:block;width:100%;padding:13px;margin:10px 0;border-radius:8px;font:inherit}
+button{background:#222;color:white;border:0}button.secondary{background:white;color:#222;border:1px solid #aaa}
+input{border:1px solid #aaa}#reader{width:100%;overflow:hidden}#msg{background:#eee;border-radius:8px;padding:13px;margin-bottom:14px;overflow-wrap:anywhere}
+#msg.error{background:#ffe9e7;color:#912018}#msg.success{background:#e9f6ed;color:#21643c}[hidden]{display:none!important}
+</style>
 </head>
-
 <body>
-
-  <header>
-    <h1>Leitor de ISBN</h1>
-    <div class="nota">
-      Biblioteca Casa · Artur e Samuel
-    </div>
-  </header>
-
-  <main>
-
-    <div id="mensagem" role="status" aria-live="polite">
-      Leitor pronto para iniciar.
-    </div>
-
-    <section class="card">
-      <h2>Digitalizar código de barras</h2>
-
-      <p class="nota">
-        Aponta a câmara traseira para o código
-        ISBN/EAN-13 do livro.
-      </p>
-
-      <button id="abrir" onclick="abrirCamara()">
-        Abrir câmara
-      </button>
-
-      <div id="reader"></div>
-
-      <button id="parar"
-              class="secundario"
-              onclick="pararCamara()"
-              hidden>
-        Parar câmara
-      </button>
-    </section>
-
-    <section class="card">
-      <h2>ISBN identificado</h2>
-
-      <input
-        id="isbn"
-        type="text"
-        inputmode="numeric"
-        maxlength="17"
-        autocomplete="off"
-        placeholder="978..."
-        aria-label="ISBN identificado"
-      >
-
-      <button onclick="confirmarISBN()">
-        Confirmar ISBN
-      </button>
-
-      <button class="secundario" onclick="copiarISBN()">
-        Copiar ISBN
-      </button>
-
-      <button onclick="voltarBiblioteca()">
-        Voltar à Biblioteca Casa
-      </button>
-
-      <p class="nota">
-        O ISBN será enviado para a Biblioteca Casa.
-        Nenhum livro será guardado automaticamente.
-      </p>
-    </section>
-
-  </main>
-
-  <script>
-    "use strict";
-
-    const URL_BIBLIOTECA =
-      "https://script.google.com/macros/s/AKfycbxrdANSHWmMhF8kN7Ik9C8JdJPfEcdTWuRWlwX0laF1IqL6PHIeTp0sy_45xUCL8fvHSQ/exec";
-
-    const $ = id => document.getElementById(id);
-
-    let scanner = null;
-    let ocupado = false;
-    let reconhecido = false;
-
-    function mensagem(texto, tipo = "") {
-      $("mensagem").textContent = texto;
-      $("mensagem").className = tipo;
-    }
-
-    function normalizarISBN(valor) {
-      return String(valor || "")
-        .replace(/[^0-9X]/gi, "")
-        .toUpperCase();
-    }
-
-    function isbn13Valido(isbn) {
-      if (!/^97[89]\d{10}$/.test(isbn)) {
-        return false;
-      }
-
-      let soma = 0;
-
-      for (let i = 0; i < 12; i++) {
-        soma += Number(isbn[i]) *
-          (i % 2 === 0 ? 1 : 3);
-      }
-
-      const digito = (10 - (soma % 10)) % 10;
-
-      return digito === Number(isbn[12]);
-    }
-
-    async function abrirCamara() {
-      if (ocupado || scanner) return;
-
-      if (typeof Html5Qrcode === "undefined") {
-        mensagem(
-          "Não foi possível carregar o leitor de códigos.",
-          "erro"
-        );
-        return;
-      }
-
-      ocupado = true;
-      reconhecido = false;
-      $("abrir").disabled = true;
-
-      try {
-        scanner = new Html5Qrcode("reader", {
-          formatsToSupport: [
-            Html5QrcodeSupportedFormats.EAN_13
-          ],
-          verbose: false
-        });
-
-        await scanner.start(
-          { facingMode: "environment" },
-          {
-            fps: 10,
-            qrbox: (largura, altura) => ({
-              width: Math.min(
-                Math.floor(largura * 0.9),
-                320
-              ),
-              height: Math.min(
-                Math.floor(altura * 0.45),
-                140
-              )
-            })
-          },
-          codigo => {
-            if (reconhecido) return;
-
-            const isbn = normalizarISBN(codigo);
-
-            if (!isbn13Valido(isbn)) return;
-
-            reconhecido = true;
-            $("isbn").value = isbn;
-
-            mensagem(
-              "ISBN reconhecido: " + isbn,
-              "sucesso"
-            );
-
-            pararCamara();
-          },
-          () => {}
-        );
-
-        if (scanner && scanner.isScanning) {
-          $("parar").hidden = false;
-
-          if (!reconhecido) {
-            mensagem(
-              "Câmara ativa. Aponta para o ISBN."
-            );
-          }
-        }
-
-      } catch (erro) {
-        mensagem(
-          "Erro ao abrir a câmara: " +
-          (erro.message || String(erro)),
-          "erro"
-        );
-
-        if (scanner) {
-          try {
-            await scanner.clear();
-          } catch (e) {}
-
-          scanner = null;
-        }
-
-      } finally {
-        ocupado = false;
-        $("abrir").disabled = false;
-      }
-    }
-
-    async function pararCamara() {
-      if (!scanner) return;
-
-      const atual = scanner;
-      scanner = null;
-
-      try {
-        if (atual.isScanning) {
-          await atual.stop();
-        }
-
-        await atual.clear();
-
-      } catch (erro) {
-        console.warn(
-          "Erro ao parar a câmara:",
-          erro
-        );
-
-      } finally {
-        $("parar").hidden = true;
-      }
-    }
-
-    function confirmarISBN() {
-      const isbn = normalizarISBN(
-        $("isbn").value
-      );
-
-      $("isbn").value = isbn;
-
-      if (!isbn13Valido(isbn)) {
-        mensagem(
-          "Introduz um ISBN-13 válido.",
-          "erro"
-        );
-        return;
-      }
-
-      mensagem(
-        "ISBN confirmado: " + isbn,
-        "sucesso"
-      );
-    }
-
-    async function copiarISBN() {
-      const isbn = normalizarISBN(
-        $("isbn").value
-      );
-
-      if (!isbn13Valido(isbn)) {
-        mensagem(
-          "Primeiro identifica um ISBN válido.",
-          "erro"
-        );
-        return;
-      }
-
-      try {
-        await navigator.clipboard.writeText(isbn);
-
-        mensagem(
-          "ISBN copiado: " + isbn,
-          "sucesso"
-        );
-
-      } catch (erro) {
-        mensagem(
-          "Não foi possível copiar automaticamente.",
-          "erro"
-        );
-      }
-    }
-
-    async function voltarBiblioteca() {
-      const isbn = normalizarISBN(
-        $("isbn").value
-      );
-
-      if (!isbn13Valido(isbn)) {
-        mensagem(
-          "Primeiro digitaliza ou introduz um ISBN válido.",
-          "erro"
-        );
-        return;
-      }
-
-      await pararCamara();
-
-      const destino = new URL(URL_BIBLIOTECA);
-      destino.searchParams.set("isbn", isbn);
-
-      window.location.assign(destino.toString());
-    }
-
-    window.addEventListener("pagehide", () => {
-      if (scanner) {
-        pararCamara();
-      }
-    });
-  </script>
-
+<header><h1>Leitor de ISBN</h1><div class="note">Biblioteca Casa · Artur e Samuel</div></header>
+<main>
+<div id="msg" role="status" aria-live="polite">A iniciar a câmara...</div>
+<section class="card">
+<p class="note">Aponta a câmara traseira para o código de barras ISBN/EAN-13. Após a leitura, regressarás automaticamente à Biblioteca Casa.</p>
+<div id="reader"></div>
+<button id="retry" onclick="openCamera()" hidden>Tentar novamente</button>
+<button class="secondary" onclick="stopCamera()">Parar câmara</button>
+</section>
+<section class="card">
+<label for="isbn">Introdução manual (caso a leitura falhe)</label>
+<input id="isbn" type="text" inputmode="numeric" autocomplete="off" placeholder="978..." maxlength="17">
+<button onclick="sendISBN()">Usar ISBN introduzido</button>
+<button class="secondary" onclick="returnWithoutISBN()">Voltar sem ISBN</button>
+</section>
+</main>
+<script>
+'use strict';
+const APP_URL='https://script.google.com/macros/s/AKfycbzXh-4YFCrnFJrrbIa3xTBO3xri2lauucvB7ZcYkeZlbTVYlxCxm0hMoe4q1pZocFJn0w/exec';
+const params=new URLSearchParams(location.search);
+const mode=params.get('modo')==='pesquisa'?'pesquisa':'adicionar';
+const $=id=>document.getElementById(id);
+let scanner=null,opening=false,done=false;
+function msg(t,type=''){$('msg').textContent=t;$('msg').className=type;}
+function norm(s){return String(s||'').replace(/[^0-9X]/gi,'').toUpperCase();}
+function valid(s){if(!/^97[89]\d{10}$/.test(s))return false;let sum=0;for(let i=0;i<12;i++)sum+=Number(s[i])*(i%2?3:1);return (10-sum%10)%10===Number(s[12]);}
+async function stopCamera(){const s=scanner;scanner=null;if(!s)return;try{if(s.isScanning)await s.stop();await s.clear();}catch(e){console.warn(e);}}
+function go(isbn){const u=new URL(APP_URL);u.searchParams.set('modo',mode);if(isbn)u.searchParams.set('isbn',isbn);location.replace(u.toString());}
+async function onRead(raw){if(done)return;const isbn=norm(raw);if(!valid(isbn))return;done=true;$('isbn').value=isbn;msg('ISBN reconhecido: '+isbn+'. A regressar à Biblioteca Casa...','success');await stopCamera();go(isbn);}
+async function openCamera(){if(opening||scanner||done)return;opening=true;$('retry').hidden=true;
+try{if(typeof Html5Qrcode==='undefined')throw new Error('Biblioteca de leitura não carregada.');
+scanner=new Html5Qrcode('reader',{formatsToSupport:[Html5QrcodeSupportedFormats.EAN_13],verbose:false});
+await scanner.start({facingMode:'environment'},{fps:10,qrbox:(w,h)=>({width:Math.max(100,Math.min(Math.floor(w*.9),320)),height:Math.max(65,Math.min(Math.floor(h*.35),130))})},onRead,()=>{});
+if(!done)msg('Câmara ativa. Aponta para o ISBN.');
+}catch(e){msg('Não foi possível abrir a câmara: '+(e.message||e)+'. Podes introduzir o ISBN manualmente.','error');await stopCamera();$('retry').hidden=false;}
+finally{opening=false;}}
+async function sendISBN(){const isbn=norm($('isbn').value);if(!valid(isbn)){msg('Introduz um ISBN-13 válido.','error');return;}if(done)return;done=true;msg('A regressar à Biblioteca Casa...','success');await stopCamera();go(isbn);}
+async function returnWithoutISBN(){done=true;await stopCamera();go('');}
+window.addEventListener('pagehide',()=>{if(scanner)stopCamera();});
+window.addEventListener('load',()=>openCamera());
+</script>
 </body>
 </html>
